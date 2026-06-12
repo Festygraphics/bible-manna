@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Bible Manna</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg0:#03060F;
+      --bg1:#060C1A;
+      --glass:rgba(255,255,255,0.055);
+      --glass-border:rgba(255,255,255,0.10);
+      --glass-hover:rgba(255,255,255,0.085);
+      --gold:#D4A843;
+      --gold2:#F0CC6A;
+      --gold-glow:rgba(212,168,67,0.18);
+      --gold-glow2:rgba(212,168,67,0.08);
+      --white:#EEE9E0;
+      --muted:rgba(238,233,224,0.45);
+      --muted2:rgba(238,233,224,0.25);
+      --danger:#E05C5C;
+      --success:#4ECDC4;
+      --r:18px; --r-sm:12px; --r-xs:8px;
+
+      /* Liquid blob colors */
+      --blob1:rgba(120,60,200,0.35);
+      --blob2:rgba(30,80,200,0.3);
+      --blob3:rgba(180,100,20,0.2);
+      --blob4:rgba(60,20,140,0.25);
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+
+    html,body{
+      height:100%;overflow:hidden;
+      background:var(--bg0);
+      color:var(--white);
+      font-family:'Inter',sans-serif;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* ── LIQUID BACKGROUND ── */
+    .liquid-bg{
+      position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+    }
+    .blob{
+      position:absolute;border-radius:50%;filter:blur(72px);
+      animation:drift 18s ease-in-out infinite;
+      will-change:transform;
+    }
+    .blob1{width:420px;height:420px;background:var(--blob1);top:-80px;left:-100px;animation-delay:0s;}
+    .blob2{width:380px;height:380px;background:var(--blob2);top:30%;right:-120px;animation-delay:-6s;}
+    .blob3{width:300px;height:300px;background:var(--blob3);bottom:-60px;left:20%;animation-delay:-12s;}
+    .blob4{width:260px;height:260px;background:var(--blob4);bottom:20%;right:10%;animation-delay:-4s;}
+
+    @keyframes drift{
+      0%,100%{transform:translate(0,0) scale(1);}
+      25%{transform:translate(30px,-40px) scale(1.05);}
+      50%{transform:translate(-20px,30px) scale(0.96);}
+      75%{transform:translate(40px,20px) scale(1.03);}
+    }
+
+    /* ── SCREENS ── */
+    .screen{
+      position:absolute;inset:0;z-index:1;
+      display:flex;flex-direction:column;overflow:hidden;
+      opacity:0;pointer-events:none;
+      transition:opacity .3s cubic-bezier(.4,0,.2,1);
+    }
+    .screen.active{opacity:1;pointer-events:all;}
+
+    /* ── GLASS CARD ── */
+    .glass{
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(20px) saturate(180%);
+      -webkit-backdrop-filter:blur(20px) saturate(180%);
+      border-radius:var(--r);
+    }
+    .glass-sm{
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(16px);
+      -webkit-backdrop-filter:blur(16px);
+      border-radius:var(--r-sm);
+    }
+
+    /* ── ONBOARDING ── */
+    #screen-onboard{
+      justify-content:center;align-items:center;
+      padding:32px 24px;overflow-y:auto;
+      background:transparent;
+    }
+    .ob-logo{
+      width:96px;height:96px;border-radius:28px;
+      background:linear-gradient(135deg,rgba(212,168,67,0.2),rgba(212,168,67,0.05));
+      border:1px solid rgba(212,168,67,0.3);
+      backdrop-filter:blur(20px);
+      display:flex;align-items:center;justify-content:center;
+      margin-bottom:22px;
+      box-shadow:0 0 40px rgba(212,168,67,0.15);
+    }
+    .ob-logo svg{width:48px;height:48px;}
+    .ob-title{
+      font-family:'Cormorant Garamond',serif;
+      font-size:32px;font-weight:600;
+      color:var(--gold2);letter-spacing:.5px;
+      text-align:center;margin-bottom:6px;
+      text-shadow:0 0 30px rgba(212,168,67,0.4);
+    }
+    .ob-sub{font-size:14px;color:var(--muted);text-align:center;line-height:1.7;margin-bottom:32px;}
+    .ob-feats{width:100%;display:flex;flex-direction:column;gap:10px;margin-bottom:32px;}
+    .ob-feat{
+      display:flex;align-items:center;gap:14px;
+      padding:14px 16px;
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(16px);
+      border-radius:var(--r-sm);
+    }
+    .ob-feat-icon{
+      width:40px;height:40px;border-radius:12px;
+      background:var(--gold-glow);border:1px solid rgba(212,168,67,0.2);
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+    .ob-feat-icon svg{width:20px;height:20px;}
+    .ob-feat-title{font-size:14px;color:var(--white);font-weight:500;}
+    .ob-feat-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+    .btn-gold{
+      width:100%;padding:16px;
+      background:linear-gradient(135deg,#D4A843,#A87820);
+      border:none;border-radius:var(--r);
+      font-size:15px;font-weight:600;color:#08070A;
+      cursor:pointer;letter-spacing:.3px;
+      font-family:'Inter',sans-serif;
+      box-shadow:0 8px 32px rgba(212,168,67,0.3);
+      transition:transform .15s,box-shadow .15s;
+    }
+    .btn-gold:active{transform:scale(.97);box-shadow:0 4px 16px rgba(212,168,67,0.2);}
+
+    /* ── TOPBAR ── */
+    .topbar{
+      padding:14px 20px 8px;
+      display:flex;align-items:center;justify-content:space-between;
+      flex-shrink:0;
+    }
+    .topbar-title{
+      font-family:'Cormorant Garamond',serif;
+      font-size:18px;font-weight:600;color:var(--gold2);
+      letter-spacing:.3px;
+    }
+    .streak-pill{
+      display:flex;align-items:center;gap:6px;
+      background:var(--gold-glow);
+      border:1px solid rgba(212,168,67,0.2);
+      border-radius:20px;padding:5px 12px;
+      font-size:12px;color:var(--gold2);font-weight:600;
+      backdrop-filter:blur(12px);
+    }
+    .streak-pill svg{width:14px;height:14px;}
+
+    /* ── SCROLL ── */
+    .scroll{flex:1;overflow-y:auto;padding:0 14px 14px;}
+    .scroll::-webkit-scrollbar{display:none;}
+
+    /* ── SECTION LABEL ── */
+    .sec-label{
+      font-size:10px;text-transform:uppercase;letter-spacing:2px;
+      color:var(--muted);font-weight:600;margin:18px 0 10px;
+    }
+
+    /* ── DAILY VERSE CARD ── */
+    .verse-card{
+      background:linear-gradient(135deg,rgba(212,168,67,0.1),rgba(100,50,200,0.08));
+      border:1px solid rgba(212,168,67,0.2);
+      backdrop-filter:blur(24px) saturate(200%);
+      -webkit-backdrop-filter:blur(24px) saturate(200%);
+      border-radius:22px;padding:22px;
+      margin-bottom:14px;position:relative;overflow:hidden;
+    }
+    .verse-card::before{
+      content:'';position:absolute;top:-40px;right:-40px;
+      width:160px;height:160px;border-radius:50%;
+      background:radial-gradient(circle,rgba(212,168,67,0.12),transparent 70%);
+      pointer-events:none;
+    }
+    .vc-label{
+      display:flex;align-items:center;gap:6px;
+      font-size:10px;text-transform:uppercase;letter-spacing:2px;
+      color:var(--gold);font-weight:600;margin-bottom:14px;
+    }
+    .vc-label svg{width:12px;height:12px;}
+    .vc-text{
+      font-family:'Cormorant Garamond',serif;
+      font-size:19px;line-height:1.65;
+      color:var(--white);font-style:italic;
+      margin-bottom:12px;
+    }
+    .vc-ref{font-size:12px;color:var(--gold2);font-weight:600;letter-spacing:.3px;}
+    .vc-actions{display:flex;gap:8px;margin-top:16px;}
+    .vc-btn{
+      flex:1;padding:10px 6px;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:var(--r-sm);
+      color:var(--white);font-size:12px;font-weight:500;
+      cursor:pointer;text-align:center;
+      display:flex;align-items:center;justify-content:center;gap:5px;
+      backdrop-filter:blur(8px);
+      transition:background .2s;
+    }
+    .vc-btn:active{background:rgba(255,255,255,0.12);}
+    .vc-btn svg{width:14px;height:14px;flex-shrink:0;}
+
+    /* ── QUICK GRID ── */
+    .quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+    .quick-card{
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(20px);
+      -webkit-backdrop-filter:blur(20px);
+      border-radius:var(--r);padding:16px;
+      cursor:pointer;
+      transition:background .2s,transform .15s;
+    }
+    .quick-card:active{background:var(--glass-hover);transform:scale(.97);}
+    .qc-icon{
+      width:42px;height:42px;border-radius:14px;
+      display:flex;align-items:center;justify-content:center;
+      margin-bottom:10px;
+    }
+    .qc-icon svg{width:22px;height:22px;}
+    .qc-title{font-size:14px;font-weight:600;color:var(--white);margin-bottom:3px;}
+    .qc-sub{font-size:11px;color:var(--muted);}
+
+    /* ── PLAN CARD ── */
+    .plan-row{
+      display:flex;align-items:center;gap:12px;
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(20px);
+      border-radius:var(--r);
+      padding:14px;margin-bottom:9px;cursor:pointer;
+      transition:background .2s;
+    }
+    .plan-row:active{background:var(--glass-hover);}
+    .plan-icon-wrap{
+      width:44px;height:44px;border-radius:14px;
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;
+    }
+    .plan-icon-wrap svg{width:24px;height:24px;}
+    .plan-info{flex:1;}
+    .plan-name{font-size:14px;font-weight:600;color:var(--white);}
+    .plan-days{font-size:11px;color:var(--muted);margin-top:3px;}
+    .plan-bar{width:100%;height:2px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:8px;}
+    .plan-fill{height:100%;background:var(--gold);border-radius:2px;}
+    .plan-badge{
+      font-size:11px;color:var(--gold);
+      background:var(--gold-glow2);
+      border:1px solid rgba(212,168,67,0.2);
+      padding:3px 9px;border-radius:10px;white-space:nowrap;
+    }
+
+    /* ── BIBLE READER ── */
+    .bible-ctrl{display:flex;gap:8px;margin-bottom:10px;}
+    .bselect{
+      flex:1;min-width:0;
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(16px);
+      border-radius:var(--r-sm);
+      color:var(--white);font-size:14px;
+      padding:10px 12px;cursor:pointer;
+      font-family:'Inter',sans-serif;
+    }
+    .bible-nav-row{display:flex;gap:8px;margin-bottom:12px;}
+    .bnav{
+      flex:1;padding:10px;
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(12px);
+      border-radius:var(--r-sm);
+      color:var(--white);font-size:13px;
+      cursor:pointer;text-align:center;
+      transition:background .2s;
+    }
+    .bnav:active{background:var(--glass-hover);}
+    .bnav.center{background:var(--gold-glow);border-color:rgba(212,168,67,0.25);color:var(--gold2);}
+    .verse-wrap{
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(20px);
+      border-radius:var(--r);padding:18px;
+    }
+    .verse-ch-title{
+      font-family:'Cormorant Garamond',serif;
+      font-size:16px;color:var(--gold2);
+      margin-bottom:14px;text-align:center;letter-spacing:.3px;
+    }
+    .vitem{
+      display:flex;gap:10px;margin-bottom:13px;
+      cursor:pointer;padding:5px;border-radius:var(--r-xs);
+      transition:background .15s;
+    }
+    .vitem:active{background:var(--gold-glow2);}
+    .vnum{font-size:10px;color:var(--gold);font-weight:700;min-width:18px;margin-top:4px;}
+    .vtext{font-size:15px;line-height:1.75;color:var(--white);}
+    .load-txt{text-align:center;color:var(--muted);padding:40px 0;font-size:14px;}
+
+    /* ── AI CHAT ── */
+    #screen-ask{background:transparent;}
+    .chat-msgs{
+      flex:1;overflow-y:auto;padding:14px;
+      display:flex;flex-direction:column;gap:12px;
+    }
+    .chat-msgs::-webkit-scrollbar{display:none;}
+    .msg{max-width:86%;display:flex;flex-direction:column;gap:4px;}
+    .msg.user{align-self:flex-end;align-items:flex-end;}
+    .msg.bot{align-self:flex-start;align-items:flex-start;}
+    .msg-name{font-size:10px;color:var(--muted);padding:0 4px;}
+    .bubble{padding:12px 15px;border-radius:18px;font-size:14px;line-height:1.65;}
+    .msg.user .bubble{
+      background:linear-gradient(135deg,#D4A843,#A87820);
+      color:#08070A;border-bottom-right-radius:4px;
+      box-shadow:0 4px 20px rgba(212,168,67,0.25);
+    }
+    .msg.bot .bubble{
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(16px);
+      color:var(--white);border-bottom-left-radius:4px;
+    }
+    .chat-bottom{
+      background:rgba(6,12,26,0.7);
+      backdrop-filter:blur(20px);
+      border-top:1px solid var(--glass-border);
+      padding:10px 14px;flex-shrink:0;
+    }
+    .free-bar{
+      text-align:center;font-size:11px;color:var(--muted);
+      margin-bottom:8px;
+    }
+    .free-bar span{color:var(--gold);font-weight:600;}
+    .chips-row{
+      display:flex;gap:7px;overflow-x:auto;
+      padding-bottom:8px;
+    }
+    .chips-row::-webkit-scrollbar{display:none;}
+    .chip{
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(12px);
+      border-radius:20px;padding:7px 13px;
+      font-size:11px;color:var(--muted2);
+      white-space:nowrap;cursor:pointer;flex-shrink:0;
+      transition:all .2s;
+    }
+    .chip:active{background:var(--gold-glow);color:var(--gold2);}
+    .chat-input-row{display:flex;gap:8px;align-items:flex-end;}
+    .chat-input{
+      flex:1;
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(16px);
+      border-radius:22px;
+      color:var(--white);font-size:14px;
+      padding:11px 16px;outline:none;
+      resize:none;max-height:100px;
+      font-family:'Inter',sans-serif;line-height:1.5;
+    }
+    .chat-input::placeholder{color:var(--muted);}
+    .send-btn{
+      width:42px;height:42px;flex-shrink:0;
+      background:linear-gradient(135deg,#D4A843,#A87820);
+      border:none;border-radius:50%;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 16px rgba(212,168,67,0.3);
+      transition:transform .15s;
+    }
+    .send-btn:active{transform:scale(.92);}
+    .send-btn svg{width:18px;height:18px;}
+    .typing-wrap{display:flex;gap:4px;padding:10px 14px;}
+    .dot{width:7px;height:7px;background:var(--muted);border-radius:50%;animation:bop .6s infinite;}
+    .dot:nth-child(2){animation-delay:.15s;}
+    .dot:nth-child(3){animation-delay:.3s;}
+    @keyframes bop{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-7px);}}
+
+    /* ── PRAYER ── */
+    .prayer-input-card{
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(20px);
+      border-radius:var(--r);padding:16px;margin-bottom:14px;
+    }
+    .prayer-ta{
+      width:100%;
+      background:rgba(255,255,255,0.04);
+      border:1px solid var(--glass-border);
+      border-radius:var(--r-sm);
+      color:var(--white);font-size:14px;
+      padding:12px;outline:none;resize:none;height:96px;
+      font-family:'Inter',sans-serif;line-height:1.6;
+    }
+    .prayer-ta::placeholder{color:var(--muted);}
+    .btn-action{
+      width:100%;padding:13px;margin-top:10px;
+      background:linear-gradient(135deg,#D4A843,#A87820);
+      border:none;border-radius:var(--r-sm);
+      color:#08070A;font-size:14px;font-weight:600;
+      cursor:pointer;font-family:'Inter',sans-serif;
+      box-shadow:0 4px 20px rgba(212,168,67,0.25);
+      transition:transform .15s;
+    }
+    .btn-action:active{transform:scale(.98);}
+    .prayer-item{
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(16px);
+      border-radius:var(--r);padding:15px;
+      margin-bottom:9px;
+      border-left:2px solid var(--gold);
+    }
+    .prayer-text{font-size:14px;color:var(--white);line-height:1.65;margin-bottom:7px;}
+    .prayer-date{font-size:11px;color:var(--muted);}
+    .prayer-acts{display:flex;gap:8px;margin-top:9px;}
+    .pbtn{
+      padding:5px 12px;border-radius:20px;font-size:11px;
+      cursor:pointer;border:none;font-family:'Inter',sans-serif;
+    }
+    .pbtn.ok{background:rgba(78,205,196,0.12);color:var(--success);}
+    .pbtn.del{background:rgba(224,92,92,0.12);color:var(--danger);}
+
+    /* ── PROFILE ── */
+    .streak-hero{
+      background:linear-gradient(135deg,rgba(212,168,67,0.12),rgba(100,50,200,0.1));
+      border:1px solid rgba(212,168,67,0.18);
+      backdrop-filter:blur(24px);
+      border-radius:22px;padding:26px;
+      text-align:center;margin-bottom:12px;
+      position:relative;overflow:hidden;
+    }
+    .streak-hero::before{
+      content:'';position:absolute;top:-60px;right:-60px;
+      width:200px;height:200px;border-radius:50%;
+      background:radial-gradient(circle,rgba(212,168,67,0.1),transparent 70%);
+    }
+    .sh-fire{font-size:28px;margin-bottom:6px;}
+    .sh-num{
+      font-family:'Cormorant Garamond',serif;
+      font-size:64px;font-weight:600;color:var(--gold2);
+      line-height:1;text-shadow:0 0 40px rgba(212,168,67,0.4);
+    }
+    .sh-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-top:4px;}
+    .week-row{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:18px;}
+    .wday{
+      aspect-ratio:1;border-radius:8px;
+      display:flex;flex-direction:column;align-items:center;
+      justify-content:center;font-size:9px;color:var(--muted);gap:3px;
+    }
+    .wday.done{background:rgba(212,168,67,0.15);color:var(--gold);}
+    .wday.today{
+      background:var(--gold-glow);color:var(--gold2);
+      border:1px solid rgba(212,168,67,0.25);
+    }
+    .wdot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.1);}
+    .wday.done .wdot,.wday.today .wdot{background:var(--gold);}
+    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px;}
+    .stat-card{
+      background:var(--glass);border:1px solid var(--glass-border);
+      backdrop-filter:blur(16px);border-radius:var(--r);
+      padding:16px;text-align:center;
+    }
+    .stat-n{
+      font-family:'Cormorant Garamond',serif;
+      font-size:28px;color:var(--gold2);font-weight:600;
+    }
+    .stat-l{font-size:11px;color:var(--muted);margin-top:3px;}
+    .rem-card{
+      background:var(--glass);border:1px solid var(--glass-border);
+      backdrop-filter:blur(16px);border-radius:var(--r);
+      padding:14px;margin-bottom:9px;
+    }
+    .rem-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .rem-label{font-size:13px;color:var(--white);font-weight:500;display:flex;align-items:center;gap:8px;}
+    .rem-label svg{width:15px;height:15px;color:var(--gold);}
+    .toggle{
+      width:42px;height:23px;background:rgba(255,255,255,0.1);
+      border-radius:12px;cursor:pointer;position:relative;
+      transition:background .25s;flex-shrink:0;
+    }
+    .toggle.on{background:var(--gold);}
+    .toggle-thumb{
+      width:19px;height:19px;background:white;border-radius:50%;
+      position:absolute;top:2px;left:2px;
+      transition:left .25s;box-shadow:0 1px 4px rgba(0,0,0,.3);
+    }
+    .toggle.on .toggle-thumb{left:21px;}
+    .time-in{
+      width:100%;background:rgba(255,255,255,0.05);
+      border:1px solid var(--glass-border);
+      border-radius:var(--r-sm);color:var(--white);
+      font-size:14px;padding:9px 12px;outline:none;
+      font-family:'Inter',sans-serif;
+    }
+
+    /* ── PREMIUM / DONATE ── */
+    .prem-hero{
+      background:linear-gradient(135deg,rgba(212,168,67,0.12),rgba(80,30,180,0.12));
+      border:1px solid rgba(212,168,67,0.22);
+      backdrop-filter:blur(24px);
+      border-radius:22px;padding:26px;
+      text-align:center;margin-bottom:16px;
+    }
+    .ph-icon{
+      width:64px;height:64px;border-radius:20px;
+      background:var(--gold-glow);border:1px solid rgba(212,168,67,0.25);
+      display:flex;align-items:center;justify-content:center;
+      margin:0 auto 12px;
+    }
+    .ph-icon svg{width:32px;height:32px;}
+    .ph-title{
+      font-family:'Cormorant Garamond',serif;
+      font-size:22px;color:var(--gold2);font-weight:600;
+      margin-bottom:7px;
+    }
+    .ph-sub{font-size:13px;color:var(--muted);line-height:1.65;}
+    .pf-list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+    .pf-item{
+      display:flex;align-items:center;gap:12px;
+      background:var(--glass);border:1px solid var(--glass-border);
+      backdrop-filter:blur(12px);
+      border-radius:var(--r-sm);padding:12px;
+    }
+    .pf-dot{
+      width:22px;height:22px;border-radius:50%;flex-shrink:0;
+      background:var(--gold-glow);border:1px solid rgba(212,168,67,0.2);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .pf-dot svg{width:11px;height:11px;}
+    .pf-txt{font-size:13px;color:var(--white);}
+    .price-box{
+      background:linear-gradient(135deg,rgba(212,168,67,0.1),rgba(212,168,67,0.03));
+      border:1px solid rgba(212,168,67,0.25);
+      border-radius:var(--r);padding:18px;
+      text-align:center;margin-bottom:14px;
+    }
+    .price-amt{
+      font-family:'Cormorant Garamond',serif;
+      font-size:38px;color:var(--gold2);font-weight:600;
+    }
+    .price-per{font-size:13px;color:var(--muted);}
+    .price-note{font-size:11px;color:var(--muted);margin-top:5px;}
+    .donate-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px;}
+    .donate-opt{
+      background:var(--glass);border:1px solid var(--glass-border);
+      backdrop-filter:blur(16px);border-radius:var(--r);
+      padding:14px;cursor:pointer;text-align:center;
+      transition:background .2s,transform .15s;
+    }
+    .donate-opt:active{background:var(--glass-hover);transform:scale(.97);}
+    .do-icon{
+      width:36px;height:36px;border-radius:12px;
+      background:var(--gold-glow2);border:1px solid rgba(212,168,67,0.15);
+      display:flex;align-items:center;justify-content:center;
+      margin:0 auto 8px;
+    }
+    .do-icon svg{width:18px;height:18px;}
+    .do-amt{font-size:15px;font-weight:600;color:var(--gold2);}
+    .do-lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+
+    /* ── NAVBAR ── */
+    .navbar{
+      display:flex;
+      background:rgba(6,12,26,0.75);
+      backdrop-filter:blur(24px) saturate(180%);
+      -webkit-backdrop-filter:blur(24px) saturate(180%);
+      border-top:1px solid var(--glass-border);
+      padding:8px 0 max(10px,env(safe-area-inset-bottom));
+      flex-shrink:0;
+    }
+    .nav-item{
+      flex:1;display:flex;flex-direction:column;
+      align-items:center;gap:3px;cursor:pointer;padding:3px 0;
+    }
+    .nav-icon-wrap{
+      width:32px;height:32px;border-radius:10px;
+      display:flex;align-items:center;justify-content:center;
+      transition:background .2s,transform .2s;
+    }
+    .nav-item.active .nav-icon-wrap{
+      background:var(--gold-glow);
+      transform:scale(1.08);
+    }
+    .nav-icon-wrap svg{width:20px;height:20px;color:var(--muted);transition:color .2s;}
+    .nav-item.active .nav-icon-wrap svg{color:var(--gold2);}
+    .nav-lbl{font-size:9px;color:var(--muted);font-weight:500;transition:color .2s;letter-spacing:.3px;}
+    .nav-item.active .nav-lbl{color:var(--gold2);}
+
+    /* ── MODAL ── */
+    .modal-overlay{
+      position:fixed;inset:0;
+      background:rgba(0,0,0,.65);
+      backdrop-filter:blur(8px);
+      z-index:100;display:flex;align-items:flex-end;
+      opacity:0;pointer-events:none;transition:opacity .25s;
+    }
+    .modal-overlay.open{opacity:1;pointer-events:all;}
+    .modal-sheet{
+      background:rgba(10,16,30,0.92);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(32px);
+      border-radius:24px 24px 0 0;
+      padding:22px;width:100%;
+      transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+    }
+    .modal-overlay.open .modal-sheet{transform:translateY(0);}
+    .modal-title{
+      font-family:'Cormorant Garamond',serif;
+      font-size:18px;color:var(--gold2);
+      margin-bottom:14px;text-align:center;
+    }
+    .modal-vtext{
+      font-family:'Cormorant Garamond',serif;
+      font-size:17px;line-height:1.7;
+      color:var(--white);font-style:italic;margin-bottom:10px;
+    }
+    .modal-vref{font-size:13px;color:var(--gold2);font-weight:600;margin-bottom:18px;}
+    .modal-btns{display:flex;gap:10px;}
+    .mbtn{
+      flex:1;padding:13px;border-radius:var(--r-sm);
+      font-size:14px;cursor:pointer;border:none;
+      font-family:'Inter',sans-serif;transition:transform .15s;
+    }
+    .mbtn:active{transform:scale(.97);}
+    .mbtn.p{background:linear-gradient(135deg,#D4A843,#A87820);color:#08070A;font-weight:600;}
+    .mbtn.s{background:var(--glass);border:1px solid var(--glass-border);color:var(--white);}
+
+    /* ── SHARE CARD ── */
+    .style-chip{
+      background:var(--glass);border:1px solid var(--glass-border);
+      backdrop-filter:blur(12px);
+      border-radius:20px;padding:7px 14px;
+      font-size:12px;color:var(--muted);
+      white-space:nowrap;cursor:pointer;flex-shrink:0;
+      transition:all .2s;
+    }
+    .style-chip.active{
+      background:var(--gold-glow);
+      border-color:rgba(212,168,67,0.35);color:var(--gold2);
+    }
+
+    /* ── TOAST ── */
+    .toast{
+      position:fixed;bottom:88px;left:50%;
+      transform:translateX(-50%) translateY(14px);
+      background:rgba(15,22,40,0.92);
+      backdrop-filter:blur(20px);
+      border:1px solid var(--glass-border);
+      color:var(--white);padding:9px 18px;border-radius:20px;
+      font-size:12px;opacity:0;transition:all .3s;
+      z-index:999;white-space:nowrap;pointer-events:none;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+    /* ── EMPTY ── */
+    .empty{text-align:center;padding:36px 20px;color:var(--muted);}
+    .empty svg{width:40px;height:40px;margin-bottom:10px;opacity:.4;}
+    .empty-txt{font-size:13px;line-height:1.6;}
+
+    /* ── BACK BTN ── */
+    .back-btn{
+      display:flex;align-items:center;gap:4px;
+      font-size:13px;color:var(--muted);cursor:pointer;
+    }
+    .back-btn svg{width:16px;height:16px;}
+  </style>
+</head>
+<body>
+
+<!-- LIQUID BACKGROUND -->
+<div class="liquid-bg">
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+  <div class="blob blob3"></div>
+  <div class="blob blob4"></div>
+</div>
+
+<!-- ══════════ ONBOARDING ══════════ -->
+<div id="screen-onboard" class="screen active">
+  <div class="ob-logo">
+    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="6" width="24" height="32" rx="3" stroke="#D4A843" stroke-width="2"/>
+      <path d="M14 14h12M14 19h12M14 24h8" stroke="#D4A843" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M32 16c4 0 8 2 8 8s-4 8-8 8" stroke="#D4A843" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="32" cy="32" r="5" fill="rgba(212,168,67,0.2)" stroke="#D4A843" stroke-width="1.5"/>
+      <path d="M30 32l1.5 1.5L34 30" stroke="#D4A843" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div class="ob-title">Bible Manna</div>
+  <div class="ob-sub">Your daily spiritual nourishment.<br/>Read. Ask. Pray. Grow.</div>
+  <div class="ob-feats">
+    <div class="ob-feat">
+      <div class="ob-feat-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><path d="M12 2L12 6M12 6C9 6 6 8 6 12C6 16 9 18 12 18C15 18 18 16 18 12C18 8 15 6 12 6Z"/><path d="M12 18V22M8 22H16"/></svg>
+      </div>
+      <div><div class="ob-feat-title">Daily Verse & Devotional</div><div class="ob-feat-sub">Start every day in the Word</div></div>
+    </div>
+    <div class="ob-feat">
+      <div class="ob-feat-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 9h.01M15 9h.01M9 13s1 2 3 2 3-2 3-2"/></svg>
+      </div>
+      <div><div class="ob-feat-title">Ask the Bible Anything</div><div class="ob-feat-sub">AI-powered Scripture answers</div></div>
+    </div>
+    <div class="ob-feat">
+      <div class="ob-feat-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+      </div>
+      <div><div class="ob-feat-title">Streak Tracking</div><div class="ob-feat-sub">Build a daily reading habit</div></div>
+    </div>
+    <div class="ob-feat">
+      <div class="ob-feat-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><path d="M12 22s-8-5-8-12a8 8 0 0116 0c0 7-8 12-8 12z"/><path d="M12 10v4M12 10l2-2M12 10l-2-2"/></svg>
+      </div>
+      <div><div class="ob-feat-title">Prayer Journal</div><div class="ob-feat-sub">Record and track your prayers</div></div>
+    </div>
+  </div>
+  <button class="btn-gold" onclick="completeOnboarding()">Begin Your Journey</button>
+</div>
+
+<!-- ══════════ HOME ══════════ -->
+<div id="screen-home" class="screen">
+  <div class="topbar">
+    <div class="topbar-title" id="home-greeting">Bible Manna</div>
+    <div class="streak-pill">
+      <svg viewBox="0 0 24 24" fill="#D4A843"><path d="M12 2C9 7 6 9 6 13a6 6 0 0012 0c0-4-3-6-6-11z"/></svg>
+      <span id="streak-count">0</span> day
+    </div>
+  </div>
+  <div class="scroll">
+    <div class="verse-card">
+      <div class="vc-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Verse of the Day
+      </div>
+      <div class="vc-text" id="dv-text">Loading today's verse...</div>
+      <div class="vc-ref" id="dv-ref"></div>
+      <div class="vc-actions">
+        <div class="vc-btn" onclick="shareVerse()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share
+        </div>
+        <div class="vc-btn" onclick="openVerseModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+          Read More
+        </div>
+        <div class="vc-btn" onclick="askAboutVerse()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Ask AI
+        </div>
+      </div>
+    </div>
+    <div class="sec-label">Quick Access</div>
+    <div class="quick-grid">
+      <div class="quick-card" onclick="goTo('ask')">
+        <div class="qc-icon" style="background:rgba(120,80,255,0.15);border:1px solid rgba(120,80,255,0.2);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(160,120,255,1)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
+        </div>
+        <div class="qc-title">Ask the Bible</div>
+        <div class="qc-sub">AI-powered answers</div>
+      </div>
+      <div class="quick-card" onclick="goTo('read')">
+        <div class="qc-icon" style="background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.18);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        </div>
+        <div class="qc-title">Read Bible</div>
+        <div class="qc-sub">All 66 books</div>
+      </div>
+      <div class="quick-card" onclick="goTo('pray')">
+        <div class="qc-icon" style="background:rgba(78,205,196,0.12);border:1px solid rgba(78,205,196,0.18);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(78,205,196,1)" stroke-width="1.8" stroke-linecap="round"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg>
+        </div>
+        <div class="qc-title">Prayer Journal</div>
+        <div class="qc-sub">Record prayers</div>
+      </div>
+      <div class="quick-card" onclick="goTo('profile')">
+        <div class="qc-icon" style="background:rgba(255,150,80,0.12);border:1px solid rgba(255,150,80,0.18);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,150,80,1)" stroke-width="1.8" stroke-linecap="round"><path d="M12 2C9 7 6 9 6 13a6 6 0 0012 0c0-4-3-6-6-11z"/></svg>
+        </div>
+        <div class="qc-title">My Streak</div>
+        <div class="qc-sub">Track progress</div>
+      </div>
+    </div>
+    <div class="sec-label">Reading Plans</div>
+    <div id="plans-preview"></div>
+  </div>
+  <div class="navbar">
+    <div class="nav-item active" onclick="goTo('home')">
+      <div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+      <div class="nav-lbl">Home</div>
+    </div>
+    <div class="nav-item" onclick="goTo('read')">
+      <div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div>
+      <div class="nav-lbl">Bible</div>
+    </div>
+    <div class="nav-item" onclick="goTo('ask')">
+      <div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+      <div class="nav-lbl">Ask</div>
+    </div>
+    <div class="nav-item" onclick="goTo('pray')">
+      <div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg></div>
+      <div class="nav-lbl">Pray</div>
+    </div>
+    <div class="nav-item" onclick="goTo('profile')">
+      <div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="nav-lbl">Me</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ BIBLE READER ══════════ -->
+<div id="screen-read" class="screen">
+  <div class="topbar"><div class="topbar-title">Bible Reader</div></div>
+  <div style="padding:0 14px;flex-shrink:0;">
+    <div class="bible-ctrl">
+      <select class="bselect" id="book-select" onchange="onBookChange()"></select>
+      <select class="bselect" id="chapter-select" style="max-width:95px;" onchange="loadChapter()"></select>
+    </div>
+    <div class="bible-nav-row">
+      <div class="bnav" onclick="prevChapter()">← Prev</div>
+      <div class="bnav center" id="chapter-label">Chapter 1</div>
+      <div class="bnav" onclick="nextChapter()">Next →</div>
+    </div>
+  </div>
+  <div class="scroll" id="verse-area"><div class="load-txt">Loading Scripture...</div></div>
+  <div class="navbar">
+    <div class="nav-item" onclick="goTo('home')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><div class="nav-lbl">Home</div></div>
+    <div class="nav-item active" onclick="goTo('read')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div><div class="nav-lbl">Bible</div></div>
+    <div class="nav-item" onclick="goTo('ask')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div class="nav-lbl">Ask</div></div>
+    <div class="nav-item" onclick="goTo('pray')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg></div><div class="nav-lbl">Pray</div></div>
+    <div class="nav-item" onclick="goTo('profile')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="nav-lbl">Me</div></div>
+  </div>
+</div>
+
+<!-- ══════════ ASK ══════════ -->
+<div id="screen-ask" class="screen">
+  <div class="topbar"><div class="topbar-title">Ask the Bible</div></div>
+  <div class="chat-msgs" id="chat-messages">
+    <div class="msg bot">
+      <div class="msg-name">Bible Manna AI</div>
+      <div class="bubble">Peace be with you 🕊️ Ask me anything about Scripture — a verse, a life situation, or what the Bible says about something you're facing right now.</div>
+    </div>
+  </div>
+  <div class="chat-bottom">
+    <div class="free-bar">Free today: <span id="free-count">5</span>/5 — <span style="color:var(--gold);cursor:pointer;" onclick="goTo('premium')">Upgrade ✦</span></div>
+    <div class="chips-row" id="chips-row">
+      <div class="chip" onclick="useChip(this)">I'm feeling anxious</div>
+      <div class="chip" onclick="useChip(this)">What does the Bible say about forgiveness?</div>
+      <div class="chip" onclick="useChip(this)">I lost someone I love</div>
+      <div class="chip" onclick="useChip(this)">How do I find purpose?</div>
+      <div class="chip" onclick="useChip(this)">Explain John 3:16</div>
+      <div class="chip" onclick="useChip(this)">Verses about strength</div>
+    </div>
+    <div class="chat-input-row">
+      <textarea class="chat-input" id="chat-input" placeholder="Ask anything about the Bible..." rows="1"
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#08070A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="navbar">
+    <div class="nav-item" onclick="goTo('home')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><div class="nav-lbl">Home</div></div>
+    <div class="nav-item" onclick="goTo('read')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div><div class="nav-lbl">Bible</div></div>
+    <div class="nav-item active" onclick="goTo('ask')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div class="nav-lbl">Ask</div></div>
+    <div class="nav-item" onclick="goTo('pray')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg></div><div class="nav-lbl">Pray</div></div>
+    <div class="nav-item" onclick="goTo('profile')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="nav-lbl">Me</div></div>
+  </div>
+</div>
+
+<!-- ══════════ PRAYER ══════════ -->
+<div id="screen-pray" class="screen">
+  <div class="topbar"><div class="topbar-title">Prayer Journal</div></div>
+  <div class="scroll">
+    <div class="prayer-input-card">
+      <div class="vc-label" style="margin-bottom:12px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 22s-8-5-8-12a8 8 0 0116 0c0 7-8 12-8 12z"/></svg>
+        New Prayer
+      </div>
+      <textarea class="prayer-ta" id="prayer-input" placeholder="Write your prayer... share what's on your heart."></textarea>
+      <button class="btn-action" onclick="savePrayer()">Save Prayer</button>
+    </div>
+    <div class="sec-label">Your Prayers</div>
+    <div id="prayers-list">
+      <div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s-8-5-8-12a8 8 0 0116 0c0 7-8 12-8 12z"/></svg>
+        <div class="empty-txt">Your prayer journal is empty.<br/>Write your first prayer above.</div>
+      </div>
+    </div>
+  </div>
+  <div class="navbar">
+    <div class="nav-item" onclick="goTo('home')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><div class="nav-lbl">Home</div></div>
+    <div class="nav-item" onclick="goTo('read')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div><div class="nav-lbl">Bible</div></div>
+    <div class="nav-item" onclick="goTo('ask')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div class="nav-lbl">Ask</div></div>
+    <div class="nav-item active" onclick="goTo('pray')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg></div><div class="nav-lbl">Pray</div></div>
+    <div class="nav-item" onclick="goTo('profile')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="nav-lbl">Me</div></div>
+  </div>
+</div>
+
+<!-- ══════════ PROFILE ══════════ -->
+<div id="screen-profile" class="screen">
+  <div class="topbar"><div class="topbar-title">My Progress</div></div>
+  <div class="scroll">
+    <div class="streak-hero">
+      <div class="sh-fire">🔥</div>
+      <div class="sh-num" id="big-streak">0</div>
+      <div class="sh-label">Day Streak</div>
+      <div class="week-row" id="week-grid"></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-n" id="stat-verses">0</div><div class="stat-l">Verses Read</div></div>
+      <div class="stat-card"><div class="stat-n" id="stat-prayers">0</div><div class="stat-l">Prayers Saved</div></div>
+      <div class="stat-card"><div class="stat-n" id="stat-questions">0</div><div class="stat-l">Questions Asked</div></div>
+      <div class="stat-card"><div class="stat-n" id="stat-plans">0</div><div class="stat-l">Plans Started</div></div>
+    </div>
+    <div class="sec-label">Daily Reminders</div>
+    <div class="rem-card">
+      <div class="rem-row">
+        <div class="rem-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          Morning Devotion
+        </div>
+        <div class="toggle" id="toggle-morning" onclick="toggleReminder('morning')"><div class="toggle-thumb"></div></div>
+      </div>
+      <input type="time" class="time-in" id="time-morning" value="07:00" onchange="saveReminderPref()">
+    </div>
+    <div class="rem-card">
+      <div class="rem-row">
+        <div class="rem-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C9 7 6 9 6 13a6 6 0 0012 0c0-4-3-6-6-11z"/></svg>
+          Streak Protection
+        </div>
+        <div class="toggle on" id="toggle-streak" onclick="toggleReminder('streak')"><div class="toggle-thumb"></div></div>
+      </div>
+      <input type="time" class="time-in" id="time-streak" value="20:00" onchange="saveReminderPref()">
+    </div>
+    <div class="sec-label">Account</div>
+    <div class="plan-row" onclick="goTo('premium')">
+      <div class="plan-icon-wrap" style="background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.18);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      </div>
+      <div class="plan-info"><div class="plan-name">Upgrade to Premium</div><div class="plan-days">Unlimited AI · All Bible versions · More</div></div>
+      <div class="plan-badge">$4.99/mo</div>
+    </div>
+    <div class="plan-row" onclick="goTo('donate')">
+      <div class="plan-icon-wrap" style="background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.18);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(78,205,196,1)" stroke-width="1.8" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      </div>
+      <div class="plan-info"><div class="plan-name">Support Bible Manna</div><div class="plan-days">Help keep the Word free for everyone</div></div>
+      <div class="plan-badge" style="background:rgba(78,205,196,0.1);color:var(--success);">Donate</div>
+    </div>
+  </div>
+  <div class="navbar">
+    <div class="nav-item" onclick="goTo('home')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><div class="nav-lbl">Home</div></div>
+    <div class="nav-item" onclick="goTo('read')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div><div class="nav-lbl">Bible</div></div>
+    <div class="nav-item" onclick="goTo('ask')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div class="nav-lbl">Ask</div></div>
+    <div class="nav-item" onclick="goTo('pray')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg></div><div class="nav-lbl">Pray</div></div>
+    <div class="nav-item active" onclick="goTo('profile')"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="nav-lbl">Me</div></div>
+  </div>
+</div>
+
+<!-- ══════════ PREMIUM ══════════ -->
+<div id="screen-premium" class="screen">
+  <div class="topbar">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg> Back</div>
+    <div class="topbar-title">Premium</div>
+    <div style="width:48px;"></div>
+  </div>
+  <div class="scroll">
+    <div class="prem-hero">
+      <div class="ph-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+      <div class="ph-title">Bible Manna Premium</div>
+      <div class="ph-sub">Everything you need to go deeper in the Word every single day.</div>
+    </div>
+    <div class="pf-list">
+      <div class="pf-item"><div class="pf-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="pf-txt">Unlimited AI Bible Chat — ask as much as you want</div></div>
+      <div class="pf-item"><div class="pf-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="pf-txt">All Bible translations — NIV, ESV, NLT, and more</div></div>
+      <div class="pf-item"><div class="pf-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="pf-txt">All reading plans — 7, 30 and 90-day journeys</div></div>
+      <div class="pf-item"><div class="pf-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="pf-txt">Unlimited prayer journal entries</div></div>
+      <div class="pf-item"><div class="pf-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="pf-txt">Custom reminder times — morning, evening, anytime</div></div>
+    </div>
+    <div class="price-box">
+      <div class="price-amt">$4.99</div>
+      <div class="price-per">per month</div>
+      <div class="price-note">Cancel anytime · Billed via Telegram Stars</div>
+    </div>
+    <button class="btn-gold" onclick="subscribePremium()">Unlock Premium</button>
+    <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px;">Secure payment through Telegram Stars</div>
+  </div>
+</div>
+
+<!-- ══════════ DONATE ══════════ -->
+<div id="screen-donate" class="screen">
+  <div class="topbar">
+    <div class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg> Back</div>
+    <div class="topbar-title">Support Us</div>
+    <div style="width:48px;"></div>
+  </div>
+  <div class="scroll">
+    <div class="prem-hero">
+      <div class="ph-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>
+      <div class="ph-title">Support Bible Manna</div>
+      <div class="ph-sub">"God loves a cheerful giver." — 2 Corinthians 9:7</div>
+    </div>
+    <div class="sec-label">Choose an Amount</div>
+    <div class="donate-grid">
+      <div class="donate-opt" onclick="sendDonation(50,'Buy us a coffee')">
+        <div class="do-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg></div>
+        <div class="do-amt">50 Stars</div><div class="do-lbl">Buy us a coffee</div>
+      </div>
+      <div class="donate-opt" onclick="sendDonation(100,'Supporter')">
+        <div class="do-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+        <div class="do-amt">100 Stars</div><div class="do-lbl">Supporter</div>
+      </div>
+      <div class="donate-opt" onclick="sendDonation(250,'Champion')">
+        <div class="do-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><path d="M12 2C9 7 6 9 6 13a6 6 0 0012 0c0-4-3-6-6-11z"/></svg></div>
+        <div class="do-amt">250 Stars</div><div class="do-lbl">Champion</div>
+      </div>
+      <div class="donate-opt" onclick="sendDonation(500,'Blessed Giver')">
+        <div class="do-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+        <div class="do-amt">500 Stars</div><div class="do-lbl">Blessed Giver</div>
+      </div>
+    </div>
+    <div class="sec-label">Custom Amount</div>
+    <div class="prayer-input-card">
+      <input type="number" id="custom-donation" min="10" max="10000" placeholder="Enter Stars amount e.g. 150"
+        style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);border-radius:var(--r-sm);color:var(--white);font-size:15px;padding:12px;outline:none;font-family:'Inter',sans-serif;">
+      <button class="btn-action" onclick="customDonation()">Donate Custom Amount</button>
+    </div>
+    <div class="pf-list">
+      <div class="pf-item"><div class="pf-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="pf-txt">Keep Bible Manna free for everyone globally</div></div>
+      <div class="pf-item"><div class="pf-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="pf-txt">Help us add more Bible translations</div></div>
+      <div class="pf-item"><div class="pf-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="pf-txt">Support AI Bible Chat for millions of Christians</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SHARE MODAL ══════════ -->
+<div class="modal-overlay" id="share-modal">
+  <div class="modal-sheet" style="padding:0;overflow:hidden;">
+    <div style="padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="modal-title" style="margin:0;">Share Verse</div>
+        <div onclick="closeShareModal()" style="color:var(--muted);font-size:13px;cursor:pointer;background:var(--glass);border:1px solid var(--glass-border);padding:5px 10px;border-radius:10px;">✕ Close</div>
+      </div>
+      <div style="display:flex;gap:7px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;">
+        <div class="style-chip active" onclick="selectCardStyle(0,this)">🌅 Dawn</div>
+        <div class="style-chip" onclick="selectCardStyle(1,this)">🌌 Night</div>
+        <div class="style-chip" onclick="selectCardStyle(2,this)">🌿 Garden</div>
+        <div class="style-chip" onclick="selectCardStyle(3,this)">🔥 Fire</div>
+        <div class="style-chip" onclick="selectCardStyle(4,this)">💜 Royal</div>
+      </div>
+      <div id="share-card-preview" style="border-radius:16px;overflow:hidden;margin-bottom:12px;aspect-ratio:1;"></div>
+      <div style="display:flex;gap:9px;">
+        <button class="mbtn s" onclick="downloadCard()">💾 Save</button>
+        <button class="mbtn p" onclick="shareCard()">Share Now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ VERSE MODAL ══════════ -->
+<div class="modal-overlay" id="verse-modal">
+  <div class="modal-sheet">
+    <div class="modal-title">Scripture</div>
+    <div class="modal-vtext" id="modal-verse-text"></div>
+    <div class="modal-vref" id="modal-verse-ref"></div>
+    <div class="modal-btns">
+      <button class="mbtn s" onclick="closeModal()">Close</button>
+      <button class="mbtn p" onclick="askAboutVerse()">Ask AI About This</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════
+const CONFIG = {
+  SUPABASE_URL: 'https://supabase.com/dashboard/project/tnntvqfrquarsptdnzrl',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRubnR2cWZycXVhcnNwdGRuenJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMjA5NjgsImV4cCI6MjA5NjU5Njk2OH0.EFF9K21y8CWQP5JvstsY72H2xn2DYMiqAEYtYPKDL2w',
+  GEMINI_API_KEY: 'AQ.Ab8RN6Io4OVrLwN_hKbGLSGjrkUbEHLHU0zq3eTafz-o9Cjwhw',
+  API_URL: 'YOUR_VERCEL_URL',
+};
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let currentUser = null;
+let currentScreen = 'onboard';
+let prevScreen = 'home';
+let currentBook = 'john';
+let currentChapter = 3;
+let freeQuestionsLeft = 5;
+let todayVerse = { text: '', ref: '' };
+let isSending = false;
+let isPremium = false;
+let shareCardBlob = null;
+let currentCardStyle = 0;
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+const tg = window.Telegram?.WebApp || null;
+if (tg) { tg.ready(); tg.expand(); }
+
+let sb = null;
+try {
+  if (CONFIG.SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+    sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  }
+} catch(e) { console.warn('Supabase init failed'); }
+
+function noopChain() {
+  const p = Promise.resolve({ data: null, error: null });
+  const c = { eq:()=>c, single:()=>p, order:()=>p, then:(f)=>p.then(f), catch:()=>c };
+  return c;
+}
+const db = {
+  from(t) {
+    if (!sb) return { upsert:()=>noopChain(), insert:()=>noopChain(), select:()=>noopChain(), update:()=>noopChain(), delete:()=>noopChain() };
+    return sb.from(t);
+  }
+};
+
+// ══════════════════════════════════════
+// DAILY VERSES
+// ══════════════════════════════════════
+const DAILY_VERSES = [
+  {ref:'John 3:16',text:'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.'},
+  {ref:'Philippians 4:13',text:'I can do all this through him who gives me strength.'},
+  {ref:'Jeremiah 29:11',text:'For I know the plans I have for you, declares the Lord, plans to prosper you and not to harm you, plans to give you hope and a future.'},
+  {ref:'Psalm 23:1',text:'The Lord is my shepherd, I lack nothing.'},
+  {ref:'Romans 8:28',text:'And we know that in all things God works for the good of those who love him, who have been called according to his purpose.'},
+  {ref:'Isaiah 40:31',text:'But those who hope in the Lord will renew their strength. They will soar on wings like eagles; they will run and not grow weary, they will walk and not be faint.'},
+  {ref:'Proverbs 3:5-6',text:'Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight.'},
+  {ref:'Matthew 6:33',text:'But seek first his kingdom and his righteousness, and all these things will be given to you as well.'},
+  {ref:'Psalm 46:1',text:'God is our refuge and strength, an ever-present help in trouble.'},
+  {ref:'2 Timothy 1:7',text:'For the Spirit God gave us does not make us timid, but gives us power, love and self-discipline.'},
+  {ref:'Isaiah 41:10',text:'So do not fear, for I am with you; do not be dismayed, for I am your God. I will strengthen you and help you; I will uphold you with my righteous right hand.'},
+  {ref:'Psalm 34:18',text:'The Lord is close to the brokenhearted and saves those who are crushed in spirit.'},
+  {ref:'Matthew 11:28',text:'Come to me, all you who are weary and burdened, and I will give you rest.'},
+  {ref:'Philippians 4:6-7',text:'Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God. And the peace of God will guard your hearts and minds.'},
+  {ref:'Joshua 1:9',text:'Have I not commanded you? Be strong and courageous. Do not be afraid; do not be discouraged, for the Lord your God will be with you wherever you go.'},
+  {ref:'Psalm 119:105',text:'Your word is a lamp for my feet, a light on my path.'},
+  {ref:'John 14:6',text:'Jesus answered, I am the way and the truth and the life. No one comes to the Father except through me.'},
+  {ref:'Romans 15:13',text:'May the God of hope fill you with all joy and peace as you trust in him, so that you may overflow with hope by the power of the Holy Spirit.'},
+  {ref:'Hebrews 11:1',text:'Now faith is confidence in what we hope for and assurance about what we do not see.'},
+  {ref:'Romans 12:2',text:'Do not conform to the pattern of this world, but be transformed by the renewing of your mind.'},
+  {ref:'1 Corinthians 13:4-5',text:'Love is patient, love is kind. It does not envy, it does not boast, it is not proud. It does not dishonor others, it is not self-seeking.'},
+  {ref:'Psalm 27:1',text:'The Lord is my light and my salvation — whom shall I fear? The Lord is the stronghold of my life — of whom shall I be afraid?'},
+  {ref:'John 16:33',text:'I have told you these things, so that in me you may have peace. In this world you will have trouble. But take heart! I have overcome the world.'},
+  {ref:'Lamentations 3:22-23',text:'Because of the Lord\'s great love we are not consumed, for his compassions never fail. They are new every morning; great is your faithfulness.'},
+  {ref:'Ephesians 2:8-9',text:'For it is by grace you have been saved, through faith — and this is not from yourselves, it is the gift of God — not by works, so that no one can boast.'},
+  {ref:'Romans 8:38-39',text:'For I am convinced that neither death nor life, neither angels nor demons, neither the present nor the future, nor anything else in all creation, will be able to separate us from the love of God.'},
+  {ref:'Psalm 37:4',text:'Take delight in the Lord, and he will give you the desires of your heart.'},
+  {ref:'1 Peter 5:7',text:'Cast all your anxiety on him because he cares for you.'},
+  {ref:'Matthew 5:14',text:'You are the light of the world. A town built on a hill cannot be hidden.'},
+  {ref:'Galatians 5:22-23',text:'But the fruit of the Spirit is love, joy, peace, forbearance, kindness, goodness, faithfulness, gentleness and self-control.'},
+];
+function getTodayVerse() {
+  return DAILY_VERSES[Math.floor(Date.now()/86400000) % DAILY_VERSES.length];
+}
+
+// ══════════════════════════════════════
+// BIBLE BOOKS
+// ══════════════════════════════════════
+const BOOKS=[{id:'genesis',name:'Genesis',chapters:50},{id:'exodus',name:'Exodus',chapters:40},{id:'leviticus',name:'Leviticus',chapters:27},{id:'numbers',name:'Numbers',chapters:36},{id:'deuteronomy',name:'Deuteronomy',chapters:34},{id:'joshua',name:'Joshua',chapters:24},{id:'judges',name:'Judges',chapters:21},{id:'ruth',name:'Ruth',chapters:4},{id:'1samuel',name:'1 Samuel',chapters:31},{id:'2samuel',name:'2 Samuel',chapters:24},{id:'1kings',name:'1 Kings',chapters:22},{id:'2kings',name:'2 Kings',chapters:25},{id:'1chronicles',name:'1 Chronicles',chapters:29},{id:'2chronicles',name:'2 Chronicles',chapters:36},{id:'ezra',name:'Ezra',chapters:10},{id:'nehemiah',name:'Nehemiah',chapters:13},{id:'esther',name:'Esther',chapters:10},{id:'job',name:'Job',chapters:42},{id:'psalms',name:'Psalms',chapters:150},{id:'proverbs',name:'Proverbs',chapters:31},{id:'ecclesiastes',name:'Ecclesiastes',chapters:12},{id:'songofsolomon',name:'Song of Solomon',chapters:8},{id:'isaiah',name:'Isaiah',chapters:66},{id:'jeremiah',name:'Jeremiah',chapters:52},{id:'lamentations',name:'Lamentations',chapters:5},{id:'ezekiel',name:'Ezekiel',chapters:48},{id:'daniel',name:'Daniel',chapters:12},{id:'hosea',name:'Hosea',chapters:14},{id:'joel',name:'Joel',chapters:3},{id:'amos',name:'Amos',chapters:9},{id:'obadiah',name:'Obadiah',chapters:1},{id:'jonah',name:'Jonah',chapters:4},{id:'micah',name:'Micah',chapters:7},{id:'nahum',name:'Nahum',chapters:3},{id:'habakkuk',name:'Habakkuk',chapters:3},{id:'zephaniah',name:'Zephaniah',chapters:3},{id:'haggai',name:'Haggai',chapters:2},{id:'zechariah',name:'Zechariah',chapters:14},{id:'malachi',name:'Malachi',chapters:4},{id:'matthew',name:'Matthew',chapters:28},{id:'mark',name:'Mark',chapters:16},{id:'luke',name:'Luke',chapters:24},{id:'john',name:'John',chapters:21},{id:'acts',name:'Acts',chapters:28},{id:'romans',name:'Romans',chapters:16},{id:'1corinthians',name:'1 Corinthians',chapters:16},{id:'2corinthians',name:'2 Corinthians',chapters:13},{id:'galatians',name:'Galatians',chapters:6},{id:'ephesians',name:'Ephesians',chapters:6},{id:'philippians',name:'Philippians',chapters:4},{id:'colossians',name:'Colossians',chapters:4},{id:'1thessalonians',name:'1 Thessalonians',chapters:5},{id:'2thessalonians',name:'2 Thessalonians',chapters:3},{id:'1timothy',name:'1 Timothy',chapters:6},{id:'2timothy',name:'2 Timothy',chapters:4},{id:'titus',name:'Titus',chapters:3},{id:'philemon',name:'Philemon',chapters:1},{id:'hebrews',name:'Hebrews',chapters:13},{id:'james',name:'James',chapters:5},{id:'1peter',name:'1 Peter',chapters:5},{id:'2peter',name:'2 Peter',chapters:3},{id:'1john',name:'1 John',chapters:5},{id:'2john',name:'2 John',chapters:1},{id:'3john',name:'3 John',chapters:1},{id:'jude',name:'Jude',chapters:1},{id:'revelation',name:'Revelation',chapters:22}];
+
+// ══════════════════════════════════════
+// READING PLANS
+// ══════════════════════════════════════
+const PLANS=[
+  {id:'nt-30',icon:'cross',name:'New Testament in 30 Days',days:30,desc:'Read through the entire New Testament'},
+  {id:'psalms-7',icon:'scroll',name:'Psalms & Proverbs',days:7,desc:'A week of wisdom and worship'},
+  {id:'gospels-14',icon:'dove',name:'The Four Gospels',days:14,desc:'The life and words of Jesus'},
+  {id:'genesis-7',icon:'globe',name:'In the Beginning',days:7,desc:'Genesis and the story of creation'},
+  {id:'paul-21',icon:'letter',name:"Paul's Letters",days:21,desc:"All of Paul's epistles in 3 weeks"},
+];
+const PLAN_ICONS={
+  cross:'<svg viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.8" stroke-linecap="round"><path d="M12 2v20M2 12h20"/></svg>',
+  scroll:'<svg viewBox="0 0 24 24" fill="none" stroke="#A87820" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+  dove:'<svg viewBox="0 0 24 24" fill="none" stroke="rgba(78,205,196,1)" stroke-width="1.8" stroke-linecap="round"><path d="M3 12l9-9 9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>',
+  globe:'<svg viewBox="0 0 24 24" fill="none" stroke="rgba(120,180,255,1)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>',
+  letter:'<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,150,80,1)" stroke-width="1.8" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+};
+
+// ══════════════════════════════════════
+// NAV
+// ══════════════════════════════════════
+function goTo(screen) {
+  prevScreen = currentScreen;
+  document.getElementById('screen-'+currentScreen)?.classList.remove('active');
+  currentScreen = screen;
+  document.getElementById('screen-'+screen)?.classList.add('active');
+  if (screen==='home') loadHome();
+  if (screen==='read') initBibleReader();
+  if (screen==='ask') initAskScreen();
+  if (screen==='pray') loadPrayers();
+  if (screen==='profile') loadProfile();
+}
+function goBack() { goTo(prevScreen); }
+
+// ══════════════════════════════════════
+// ONBOARDING
+// ══════════════════════════════════════
+function completeOnboarding() {
+  const u = tg?.initDataUnsafe?.user;
+  currentUser = {
+    id: u?.id || Date.now(),
+    first_name: u?.first_name || 'Friend',
+    username: u?.username || 'user',
+    lang: u?.language_code || 'en',
+  };
+  localStorage.setItem('bm_onboarded','1');
+  localStorage.setItem('bm_onboarded_shown','1');
+  localStorage.setItem('bm_user',JSON.stringify(currentUser));
+  saveUserToSupabase();
+  goTo('home');
+  checkPremiumStatus();
+}
+
+function saveUserToSupabase() {
+  if (!currentUser) return;
+  db.from('users').upsert({
+    id: currentUser.id,
+    username: currentUser.username,
+    first_name: currentUser.first_name,
+    language_code: currentUser.lang,
+    last_active: new Date().toISOString().split('T')[0],
+  },{onConflict:'id'}).then(()=>updateStreak()).catch(()=>{});
+}
+
+// ══════════════════════════════════════
+// HOME
+// ══════════════════════════════════════
+function loadHome() {
+  todayVerse = getTodayVerse();
+  document.getElementById('dv-text').textContent = todayVerse.text;
+  document.getElementById('dv-ref').textContent = '— ' + todayVerse.ref;
+  const hr = new Date().getHours();
+  const greet = hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';
+  document.getElementById('home-greeting').textContent = greet+', '+(currentUser?.first_name||'Friend');
+  renderPlans();
+  loadStreakBadge();
+}
+
+function renderPlans() {
+  document.getElementById('plans-preview').innerHTML = PLANS.slice(0,3).map(p=>`
+    <div class="plan-row" onclick="startPlan('${p.id}')">
+      <div class="plan-icon-wrap" style="background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.15);">${PLAN_ICONS[p.icon]||''}</div>
+      <div class="plan-info">
+        <div class="plan-name">${p.name}</div>
+        <div class="plan-days">${p.days} days · ${p.desc}</div>
+        <div class="plan-bar"><div class="plan-fill" style="width:0%"></div></div>
+      </div>
+      <div class="plan-badge">${p.days}d</div>
+    </div>`).join('');
+}
+
+function startPlan(id) {
+  const n=parseInt(localStorage.getItem('bm_plans')||'0')+1;
+  localStorage.setItem('bm_plans',n);
+  showToast('Reading plan started! Keep going!');
+}
+
+// ══════════════════════════════════════
+// STREAK
+// ══════════════════════════════════════
+async function updateStreak() {
+  if (!currentUser) return;
+  try {
+    const today=new Date().toISOString().split('T')[0];
+    const {data}=await db.from('users').select('streak_count,last_active').eq('id',currentUser.id).single();
+    if (!data) return;
+    const yesterday=new Date(Date.now()-86400000).toISOString().split('T')[0];
+    let s=data.streak_count||0;
+    if (data.last_active===yesterday) s++;
+    else if (data.last_active!==today) s=1;
+    await db.from('users').update({streak_count:s,last_active:today}).eq('id',currentUser.id);
+    currentUser.streak=s;
+    document.getElementById('streak-count').textContent=s;
+    document.getElementById('big-streak').textContent=s;
+  } catch(e) {}
+}
+
+async function loadStreakBadge() {
+  try {
+    const {data}=await db.from('users').select('streak_count').eq('id',currentUser?.id).single();
+    const s=data?.streak_count||0;
+    document.getElementById('streak-count').textContent=s;
+    document.getElementById('big-streak').textContent=s;
+  } catch(e) {
+    document.getElementById('streak-count').textContent='0';
+    document.getElementById('big-streak').textContent='0';
+  }
+}
+
+// ══════════════════════════════════════
+// BIBLE READER
+// ══════════════════════════════════════
+function initBibleReader() {
+  const sel=document.getElementById('book-select');
+  if (sel.options.length===0) {
+    BOOKS.forEach(b=>{
+      const o=document.createElement('option');
+      o.value=b.id; o.textContent=b.name;
+      if (b.id===currentBook) o.selected=true;
+      sel.appendChild(o);
+    });
+  }
+  populateChapters();
+  loadChapter();
+}
+
+function populateChapters() {
+  const book=BOOKS.find(b=>b.id===currentBook);
+  const sel=document.getElementById('chapter-select');
+  sel.innerHTML='';
+  for (let i=1;i<=book.chapters;i++) {
+    const o=document.createElement('option');
+    o.value=i; o.textContent='Ch '+i;
+    if (i===currentChapter) o.selected=true;
+    sel.appendChild(o);
+  }
+}
+
+function onBookChange() {
+  currentBook=document.getElementById('book-select').value;
+  currentChapter=1; populateChapters(); loadChapter();
+}
+
+async function loadChapter() {
+  currentChapter=parseInt(document.getElementById('chapter-select').value)||1;
+  document.getElementById('chapter-label').textContent='Chapter '+currentChapter;
+  const area=document.getElementById('verse-area');
+  area.innerHTML='<div class="load-txt">Loading...</div>';
+  try {
+    const bookName=BOOKS.find(b=>b.id===currentBook)?.name||currentBook;
+    const res=await fetch(`https://bible-api.com/${currentBook}+${currentChapter}?translation=kjv`);
+    if (!res.ok) throw new Error('API error');
+    const data=await res.json();
+    if (!data.verses||data.verses.length===0) throw new Error('No verses');
+    area.innerHTML=`<div class="verse-wrap">
+      <div class="verse-ch-title">${bookName} · Chapter ${currentChapter}</div>
+      ${data.verses.map(v=>{
+        const safe=v.text.replace(/'/g,"'").replace(/\n/g,' ').trim();
+        return `<div class="vitem" onclick="selectVerse('${safe.replace(/'/g,"\\'")}','${bookName} ${currentChapter}:${v.verse}')">
+          <div class="vnum">${v.verse}</div>
+          <div class="vtext">${v.text.trim()}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } catch(e) {
+    area.innerHTML='<div class="load-txt">Could not load chapter. Check your internet and try again.</div>';
+  }
+}
+
+function selectVerse(text,ref) {
+  const n=parseInt(localStorage.getItem('bm_verses')||'0')+1;
+  localStorage.setItem('bm_verses',n);
+  todayVerse={text,ref};
+  document.getElementById('modal-verse-text').textContent=text;
+  document.getElementById('modal-verse-ref').textContent='— '+ref;
+  openVerseModal();
+}
+
+function prevChapter() {
+  if (currentChapter>1){currentChapter--;document.getElementById('chapter-select').value=currentChapter;loadChapter();}
+  else {const i=BOOKS.findIndex(b=>b.id===currentBook);if(i>0){currentBook=BOOKS[i-1].id;document.getElementById('book-select').value=currentBook;currentChapter=BOOKS[i-1].chapters;populateChapters();loadChapter();}}
+}
+function nextChapter() {
+  const book=BOOKS.find(b=>b.id===currentBook);
+  if (currentChapter<book.chapters){currentChapter++;document.getElementById('chapter-select').value=currentChapter;loadChapter();}
+  else {const i=BOOKS.findIndex(b=>b.id===currentBook);if(i<BOOKS.length-1){currentBook=BOOKS[i+1].id;document.getElementById('book-select').value=currentBook;currentChapter=1;populateChapters();loadChapter();}}
+}
+
+// ══════════════════════════════════════
+// AI CHAT
+// ══════════════════════════════════════
+function initAskScreen() {
+  const today=new Date().toISOString().split('T')[0];
+  if (localStorage.getItem('bm_fq_date')!==today) {
+    localStorage.setItem('bm_fq_date',today);
+    localStorage.setItem('bm_fq_left','5');
+    freeQuestionsLeft=5;
+  } else {
+    freeQuestionsLeft=parseInt(localStorage.getItem('bm_fq_left')||'5');
+  }
+  document.getElementById('free-count').textContent=freeQuestionsLeft;
+}
+
+function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+function autoResize(el) { el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+function useChip(el) { document.getElementById('chat-input').value=el.textContent;sendMessage(); }
+
+async function sendMessage() {
+  if (isSending) return;
+  const input=document.getElementById('chat-input');
+  const text=input.value.trim();
+  if (!text) return;
+  if (freeQuestionsLeft<=0&&!isPremium){showToast('Upgrade to Premium for unlimited questions');goTo('premium');return;}
+  isSending=true;
+  input.value='';input.style.height='auto';
+  if (!isPremium){freeQuestionsLeft--;localStorage.setItem('bm_fq_left',freeQuestionsLeft);document.getElementById('free-count').textContent=freeQuestionsLeft;}
+  document.getElementById('chips-row').style.display='none';
+  appendMsg('user',text);appendTyping();
+  try {
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.GEMINI_API_KEY}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:`You are Bible Manna, a warm, wise and compassionate AI Bible companion. Your purpose is to help Christians understand Scripture and apply it to their lives.\n\nWhen answering:\n- Always respond with genuine warmth and compassion\n- Quote specific Bible verses with references (Book Chapter:Verse)\n- Give practical, actionable spiritual guidance\n- Keep language clear and accessible for all Christians globally\n- When someone shares pain or struggle, acknowledge their feelings first\n- End with a short encouraging prayer or blessing when appropriate\n- Never be preachy or judgmental\n\nUser's question: ${text}`}]}],generationConfig:{temperature:0.7,maxOutputTokens:800}})
+    });
+    const data=await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const reply=data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!reply) throw new Error('Empty response');
+    removeTyping();appendMsg('bot',reply);
+    try { await db.from('chat_history').insert({user_id:currentUser?.id||0,question:text,answer:reply}); } catch(e) {}
+  } catch(e) {
+    removeTyping();
+    appendMsg('bot',e.message?.includes('API_KEY')?'API key issue. Please check your configuration.':'Connection issue. Please check your internet and try again.');
+    if (!isPremium){freeQuestionsLeft++;localStorage.setItem('bm_fq_left',freeQuestionsLeft);document.getElementById('free-count').textContent=freeQuestionsLeft;}
+  }
+  isSending=false;
+}
+
+function appendMsg(role,text) {
+  const w=document.getElementById('chat-messages');
+  const d=document.createElement('div');
+  d.className='msg '+role;
+  d.innerHTML=(role==='bot'?'<div class="msg-name">Bible Manna AI</div>':'')+`<div class="bubble">${text.replace(/\n/g,'<br/>')}</div>`;
+  w.appendChild(d);w.scrollTop=w.scrollHeight;
+}
+function appendTyping() {
+  const w=document.getElementById('chat-messages');
+  const d=document.createElement('div');
+  d.id='typing-indicator';d.className='msg bot';
+  d.innerHTML='<div class="bubble"><div class="typing-wrap"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+  w.appendChild(d);w.scrollTop=w.scrollHeight;
+}
+function removeTyping() { document.getElementById('typing-indicator')?.remove(); }
+
+// ══════════════════════════════════════
+// PRAYER
+// ══════════════════════════════════════
+async function savePrayer() {
+  const el=document.getElementById('prayer-input');
+  const text=el.value.trim();
+  if (!text){showToast('Please write your prayer first');return;}
+  try {
+    const {error}=await db.from('prayers').insert({user_id:currentUser?.id||0,content:text});
+    if (error) throw error;
+    el.value='';showToast('Prayer saved. God hears you.');loadPrayers();
+  } catch(e){showToast('Could not save prayer. Try again.');}
+}
+
+async function loadPrayers() {
+  const list=document.getElementById('prayers-list');
+  list.innerHTML='<div class="load-txt">Loading prayers...</div>';
+  try {
+    const {data,error}=await db.from('prayers').select('*').eq('user_id',currentUser?.id||0).order('created_at',{ascending:false});
+    if (error) throw error;
+    if (!data||data.length===0){
+      list.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s-8-5-8-12a8 8 0 0116 0c0 7-8 12-8 12z"/></svg><div class="empty-txt">Your prayer journal is empty.<br/>Write your first prayer above.</div></div>';
+      return;
+    }
+    list.innerHTML=data.map(p=>`
+      <div class="prayer-item" id="prayer-${p.id}">
+        <div class="prayer-text">${escHtml(p.content)}</div>
+        <div class="prayer-date">${new Date(p.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+        <div class="prayer-acts">
+          <button class="pbtn ok" onclick="markAnswered('${p.id}')">Answered</button>
+          <button class="pbtn del" onclick="deletePrayer('${p.id}')">Delete</button>
+        </div>
+      </div>`).join('');
+  } catch(e){list.innerHTML='<div class="load-txt">Could not load prayers.</div>';}
+}
+
+async function deletePrayer(id) {
+  try{await db.from('prayers').delete().eq('id',id);document.getElementById('prayer-'+id)?.remove();showToast('Prayer removed');}catch(e){}
+}
+function markAnswered(id){showToast('Glory to God! Prayer answered!');}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ══════════════════════════════════════
+// PROFILE
+// ══════════════════════════════════════
+async function loadProfile() {
+  loadStreakBadge();
+  renderWeekGrid();
+  document.getElementById('stat-verses').textContent=localStorage.getItem('bm_verses')||'0';
+  document.getElementById('stat-plans').textContent=localStorage.getItem('bm_plans')||'0';
+  try {
+    const [{data:prayers},{data:chats}]=await Promise.all([
+      db.from('prayers').select('id').eq('user_id',currentUser?.id||0),
+      db.from('chat_history').select('id').eq('user_id',currentUser?.id||0),
+    ]);
+    document.getElementById('stat-prayers').textContent=prayers?.length||0;
+    document.getElementById('stat-questions').textContent=chats?.length||0;
+  } catch(e){}
+}
+
+function renderWeekGrid() {
+  const days=['S','M','T','W','T','F','S'];
+  const today=new Date().getDay();
+  document.getElementById('week-grid').innerHTML=days.map((d,i)=>
+    `<div class="wday ${i===today?'today':i<today?'done':''}"><div class="wdot"></div><span>${d}</span></div>`
+  ).join('');
+}
+
+function toggleReminder(type) {
+  const t=document.getElementById('toggle-'+type);
+  t.classList.toggle('on');
+  saveReminderPref();
+  showToast(t.classList.contains('on')?'Reminder enabled':'Reminder disabled');
+}
+function saveReminderPref() {
+  const p={morning:{on:document.getElementById('toggle-morning').classList.contains('on'),time:document.getElementById('time-morning').value},streak:{on:document.getElementById('toggle-streak').classList.contains('on'),time:document.getElementById('time-streak').value}};
+  localStorage.setItem('bm_reminders',JSON.stringify(p));
+  showToast('Reminder preferences saved');
+}
+
+// ══════════════════════════════════════
+// PREMIUM
+// ══════════════════════════════════════
+async function subscribePremium() {
+  if (!currentUser?.id){showToast('Please open inside Telegram');return;}
+  showToast('Opening payment...');
+  try {
+    const res=await fetch(`${CONFIG.API_URL}/api/create-invoice`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:currentUser.id})});
+    const data=await res.json();
+    if (data.ok){showToast('Check your Telegram messages for payment!');}
+    else{showToast('Could not create invoice. Try again.');}
+  } catch(e){showToast('Connection error. Try again.');}
+}
+
+async function checkPremiumStatus() {
+  if (!currentUser?.id) return;
+  try {
+    const res=await fetch(`${CONFIG.API_URL}/api/check-premium?user_id=${currentUser.id}`);
+    const data=await res.json();
+    isPremium=data.is_premium||false;
+    if (isPremium) {
+      document.getElementById('free-count').textContent='∞';
+      document.querySelector('.free-bar').innerHTML='<span style="color:var(--gold);font-weight:600;">Premium Active</span> — Unlimited AI Chat';
+      freeQuestionsLeft=9999;
+    }
+  } catch(e){}
+}
+
+// ══════════════════════════════════════
+// DONATIONS
+// ══════════════════════════════════════
+function customDonation() {
+  const val=parseInt(document.getElementById('custom-donation').value);
+  if (!val||val<10){showToast('Minimum donation is 10 Stars');return;}
+  if (val>10000){showToast('Maximum is 10,000 Stars');return;}
+  sendDonation(val,'Custom Donation');
+}
+
+async function sendDonation(stars,label) {
+  if (!currentUser?.id){showToast('Please open inside Telegram');return;}
+  showToast('Opening donation...');
+  try {
+    const res=await fetch(`${CONFIG.API_URL}/api/create-donation`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:currentUser.id,stars,label})});
+    const data=await res.json();
+    if (data.ok){showToast('Check your Telegram for the donation link!');}
+    else{showToast('Could not process. Try again.');}
+  } catch(e){showToast('Connection error. Try again.');}
+}
+
+// ══════════════════════════════════════
+// SHARE CARD
+// ══════════════════════════════════════
+const CARD_STYLES=[
+  {name:'Dawn',bg:['#1a0a2e','#2d1b4e','#8b4513','#d47c0f'],accent:'#F5D07A',text:'#FFF8E7',muted:'rgba(255,248,231,0.7)',pattern:'rays'},
+  {name:'Night',bg:['#080D1A','#0F1628','#1a2444','#0a0e1a'],accent:'#E8B84B',text:'#F0EDE6',muted:'rgba(240,237,230,0.65)',pattern:'stars'},
+  {name:'Garden',bg:['#0a1f0a','#1a3a1a','#0d2b0d','#081408'],accent:'#7BC67E',text:'#E8F5E9',muted:'rgba(232,245,233,0.65)',pattern:'leaves'},
+  {name:'Fire',bg:['#1a0500','#3d0c00','#7a1a00','#2d0800'],accent:'#FF8C42',text:'#FFF3E0',muted:'rgba(255,243,224,0.65)',pattern:'flames'},
+  {name:'Royal',bg:['#1a0535','#2d0d5c','#1a0535','#0d001a'],accent:'#CE93D8',text:'#F3E5F5',muted:'rgba(243,229,245,0.65)',pattern:'cross'},
+];
+
+function openShareModal(){
+  if (!todayVerse.text){showToast('No verse loaded yet');return;}
+  document.getElementById('share-modal').classList.add('open');
+  setTimeout(()=>renderShareCard(currentCardStyle),50);
+}
+function closeShareModal(){document.getElementById('share-modal').classList.remove('open');}
+
+function selectCardStyle(idx,el){
+  document.querySelectorAll('.style-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');currentCardStyle=idx;renderShareCard(idx);
+}
+
+function renderShareCard(si){
+  const style=CARD_STYLES[si];
+  const preview=document.getElementById('share-card-preview');
+  const S=1080;
+  const canvas=document.createElement('canvas');
+  canvas.width=S;canvas.height=S;
+  const ctx=canvas.getContext('2d');
+
+  // BG gradient
+  const gr=ctx.createRadialGradient(S*.3,S*.3,0,S*.5,S*.5,S*.8);
+  style.bg.forEach((c,i)=>gr.addColorStop(i/(style.bg.length-1),c));
+  ctx.fillStyle=gr;ctx.fillRect(0,0,S,S);
+
+  // Pattern
+  ctx.save();ctx.globalAlpha=0.07;ctx.fillStyle=style.accent;ctx.strokeStyle=style.accent;ctx.lineWidth=1;
+  if (style.pattern==='stars'){for(let i=0;i<60;i++){ctx.beginPath();ctx.arc(Math.random()*S,Math.random()*S,Math.random()*3+1,0,Math.PI*2);ctx.fill();}}
+  else if (style.pattern==='rays'){for(let i=0;i<12;i++){const a=(i/12)*Math.PI*2;ctx.beginPath();ctx.moveTo(S*.15,S*.15);ctx.lineTo(S*.15+Math.cos(a)*S*.9,S*.15+Math.sin(a)*S*.9);ctx.stroke();}}
+  else if (style.pattern==='cross'){ctx.font=`${S*.08}px serif`;ctx.textAlign='center';[[.15,.15],[.85,.15],[.15,.85],[.85,.85],[.5,.08]].forEach(([x,y])=>ctx.fillText('✝',S*x,S*y));}
+  else if (style.pattern==='leaves'){ctx.font=`${S*.07}px serif`;ctx.textAlign='center';[[.1,.1],[.9,.1],[.1,.9],[.9,.9]].forEach(([x,y])=>ctx.fillText('🌿',S*x,S*y));}
+  ctx.restore();
+
+  // Top ornament
+  ctx.strokeStyle=style.accent;ctx.lineWidth=1.5;ctx.globalAlpha=0.35;
+  ctx.beginPath();ctx.moveTo(S*.1,S*.115);ctx.lineTo(S*.9,S*.115);ctx.stroke();
+  ctx.globalAlpha=1;
+
+  // Top label
+  ctx.font=`500 ${S*.03}px Inter,sans-serif`;ctx.fillStyle=style.accent;ctx.globalAlpha=0.8;ctx.textAlign='center';
+  ctx.fillText('✦  VERSE OF THE DAY  ✦',S*.5,S*.095);ctx.globalAlpha=1;
+
+  // Cross watermark
+  ctx.font=`${S*.22}px serif`;ctx.fillStyle=style.accent;ctx.globalAlpha=0.05;ctx.textAlign='center';
+  ctx.fillText('✝',S*.5,S*.56);ctx.globalAlpha=1;
+
+  // Verse text
+  const verse=todayVerse.text||'';const ref=todayVerse.ref||'';
+  const fs=verse.length>120?S*.042:verse.length>80?S*.048:S*.054;
+  ctx.font=`italic ${fs}px Georgia,serif`;ctx.fillStyle=style.text;ctx.textAlign='center';
+  const maxW=S*.76;const lh=fs*1.55;
+  const lines=wrapCanvasText(ctx,`"${verse}"`,maxW);
+  const totalH=lines.length*lh;const sy=(S-totalH)/2-S*.02;
+  ctx.shadowColor=style.accent;ctx.shadowBlur=8;
+  lines.forEach((ln,i)=>ctx.fillText(ln,S*.5,sy+i*lh));
+  ctx.shadowBlur=0;
+
+  // Ref
+  ctx.font=`bold ${S*.036}px Georgia,serif`;ctx.fillStyle=style.accent;ctx.textAlign='center';
+  ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=5;
+  ctx.fillText(`— ${ref}`,S*.5,sy+totalH+S*.06);ctx.shadowBlur=0;
+
+  // Bottom ornament
+  ctx.strokeStyle=style.accent;ctx.lineWidth=1.5;ctx.globalAlpha=0.35;
+  ctx.beginPath();ctx.moveTo(S*.1,S*.885);ctx.lineTo(S*.9,S*.885);ctx.stroke();ctx.globalAlpha=1;
+
+  // Branding
+  ctx.font=`500 ${S*.026}px Inter,sans-serif`;ctx.fillStyle=style.accent;ctx.globalAlpha=0.65;ctx.textAlign='center';
+  ctx.fillText('📖  Bible Manna  •  t.me/BibleMannaBot',S*.5,S*.932);ctx.globalAlpha=1;
+
+  // Show preview
+  const dataUrl=canvas.toDataURL('image/png');
+  preview.innerHTML=`<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:16px;display:block;">`;
+  canvas.toBlob(b=>{shareCardBlob=b;},'image/png',1.0);
+}
+
+function wrapCanvasText(ctx,text,maxW){
+  const words=text.split(' ');const lines=[];let cur='';
+  for (const w of words){
+    const t=cur?cur+' '+w:w;
+    if (ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=w;}else{cur=t;}
+  }
+  if (cur) lines.push(cur);return lines;
+}
+
+async function shareCard(){
+  if (!shareCardBlob){showToast('Card not ready yet');return;}
+  const file=new File([shareCardBlob],'bible-manna-verse.png',{type:'image/png'});
+  if (navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file],title:'Verse of the Day — Bible Manna',text:`📖 ${todayVerse.ref}\n\n"${todayVerse.text}"\n\nt.me/BibleMannaBot`});
+      showToast('Shared successfully!');closeShareModal();return;
+    }catch(e){if(e.name==='AbortError')return;}
+  }
+  if (tg){
+    const encoded=encodeURIComponent(`📖 ${todayVerse.ref}\n\n"${todayVerse.text}"\n\n— Bible Manna on Telegram\nt.me/BibleMannaBot`);
+    tg.openLink(`https://t.me/share/url?url=https://t.me/BibleMannaBot&text=${encoded}`);
+    showToast('Opening Telegram share...');closeShareModal();return;
+  }
+  downloadCard();
+}
+
+function downloadCard(){
+  if (!shareCardBlob){showToast('Card not ready');return;}
+  const url=URL.createObjectURL(shareCardBlob);
+  const a=document.createElement('a');a.href=url;
+  a.download=`bible-manna-${(todayVerse.ref||'verse').replace(/[^a-z0-9]/gi,'_')}.png`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);showToast('Card saved to your device!');
+}
+
+function shareVerse(){openShareModal();}
+
+// ══════════════════════════════════════
+// VERSE MODAL
+// ══════════════════════════════════════
+function openVerseModal(){
+  document.getElementById('modal-verse-text').textContent=todayVerse.text;
+  document.getElementById('modal-verse-ref').textContent='— '+todayVerse.ref;
+  document.getElementById('verse-modal').classList.add('open');
+}
+function closeModal(){document.getElementById('verse-modal').classList.remove('open');}
+document.getElementById('verse-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.getElementById('share-modal').addEventListener('click',function(e){if(e.target===this)closeShareModal();});
+
+function askAboutVerse(){
+  closeModal();goTo('ask');
+  setTimeout(()=>{
+    document.getElementById('chat-input').value=`What does ${todayVerse.ref} mean and how can I apply it to my daily life?`;
+    sendMessage();
+  },350);
+}
+
+// ══════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ══════════════════════════════════════
+// AUTO SIGN-IN
+// ══════════════════════════════════════
+window.addEventListener('load',()=>{
+  const u=tg?.initDataUnsafe?.user;
+  if (u&&u.id){
+    currentUser={id:u.id,first_name:u.first_name||'Friend',username:u.username||'user',lang:u.language_code||'en'};
+    localStorage.setItem('bm_user',JSON.stringify(currentUser));
+    localStorage.setItem('bm_onboarded','1');
+    saveUserToSupabase();
+    if (localStorage.getItem('bm_onboarded_shown')){goTo('home');checkPremiumStatus();}
+    else{localStorage.setItem('bm_onboarded_shown','1');}
+    return;
+  }
+  if (localStorage.getItem('bm_onboarded')){
+    try{currentUser=JSON.parse(localStorage.getItem('bm_user'));if(!currentUser?.id)throw new Error();}
+    catch(e){currentUser={id:Date.now(),first_name:'Friend',username:'user',lang:'en'};}
+    goTo('home');
+  }
+});
+</script>
+</body>
+</html>
